@@ -1,0 +1,202 @@
+package perpowerFuncs
+
+import (
+	"bytes"
+	"io"
+	"net/http"
+	"reflect"
+	"sort"
+	"strings"
+	"unsafe"
+
+	"github.com/axgle/mahonia"
+	"github.com/gogf/gf/v2/util/gconv"
+	"github.com/thinkeridea/go-extend/exunicode/exutf8"
+)
+
+// SortNumberStrings 按数值大小排序数字字符串切片
+func SortNumberStrings(slice []string) []string {
+	// 创建一个新的切片用于排序，避免修改原始切片
+	sortedSlice := make([]string, len(slice))
+	copy(sortedSlice, slice)
+
+	// 自定义排序函数
+	sort.Slice(sortedSlice, func(i, j int) bool {
+		// 将字符串转换为整数
+		numI := gconv.Uint64(sortedSlice[i])
+		numJ := gconv.Uint64(sortedSlice[j])
+		return numI < numJ
+	})
+
+	return sortedSlice
+}
+
+// 对集合按字母顺序排序
+func SortMap(params map[string]any) map[string]any {
+	newMap := make(map[string]any)
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		newMap[k] = params[k]
+	}
+
+	return newMap
+}
+
+// 截取字符数组
+// 如果 start 是非负数，返回的字符串将从 string 的 start 位置开始，从 0 开始计算。例如，在字符串 “abcdef” 中，在位置 0 的字符是 “a”，位置 2 的字符串是 “c” 等等。
+// 如果 start 是负数，返回的字符串将从 string 结尾处向前数第 start 个字符开始。
+// 如果 string 的长度小于 start，将返回空字符串。
+//
+// 如果提供了正数的 length，返回的字符串将从 start 处开始最多包括 length 个字符（取决于 string 的长度）。
+// 如果提供了负数的 length，那么 string 末尾处的 length 个字符将会被省略（若 start 是负数则从字符串尾部算起）。如果 start 不在这段文本中，那么将返回空字符串。
+// 如果提供了值为 0 的 length，返回的子字符串将从 start 位置开始直到字符串结尾。
+func SubByte(p []byte, start, length int) []byte {
+	return exutf8.RuneSub(p, start, length)
+}
+
+// 截取普通字符串
+// 如果 start 是非负数，返回的字符串将从 string 的 start 位置开始，从 0 开始计算。例如，在字符串 “abcdef” 中，在位置 0 的字符是 “a”，位置 2 的字符串是 “c” 等等。
+// 如果 start 是负数，返回的字符串将从 string 结尾处向前数第 start 个字符开始。
+// 如果 string 的长度小于 start，将返回空字符串。
+//
+// 如果提供了正数的 length，返回的字符串将从 start 处开始最多包括 length 个字符（取决于 string 的长度）。
+// 如果提供了负数的 length，那么 string 末尾处的 length 个字符将会被省略（若 start 是负数则从字符串尾部算起）。如果 start 不在这段文本中，那么将返回空字符串。
+// 如果提供了值为 0 的 length，返回的子字符串将从 start 位置开始直到字符串结尾。
+func SubStr(s string, start, length int) string {
+	return exutf8.RuneSubString(s, start, length)
+}
+
+// string 转换 bytes
+func String2Bytes(s string) []byte {
+	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
+
+	var bh []byte
+	pbytes := (*reflect.SliceHeader)(unsafe.Pointer(&bh))
+	pbytes.Data = sh.Data
+	pbytes.Len = sh.Len
+	pbytes.Cap = sh.Len
+	return bh
+}
+
+// bytes 转换 string
+func Bytes2String(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+// Equal reports whether `a` and `b`, interpreted as UTF-8 strings,
+// are equal under Unicode case-folding, case-insensitively.
+func Equal(a, b string) bool {
+	return strings.EqualFold(a, b)
+}
+
+// Split splits string `str` by a string `delimiter`, to an array.
+func Split(str, delimiter string) []string {
+	return strings.Split(str, delimiter)
+}
+
+// SplitAndTrim splits string `str` by a string `delimiter` to an array,
+// and calls Trim to every element of this array. It ignores the elements
+// which are empty after Trim.
+func SplitAndTrim(str, delimiter string, characterMask ...string) []string {
+	array := make([]string, 0)
+	for _, v := range strings.Split(str, delimiter) {
+		v = Trim(v, characterMask...)
+		if v != "" {
+			array = append(array, v)
+		}
+	}
+	return array
+}
+
+// Join concatenates the elements of `array` to create a single string. The separator string
+// `sep` is placed between elements in the resulting string.
+func Join(array []string, sep string) string {
+	return strings.Join(array, sep)
+}
+
+// Trim strips whitespace (or other characters) from the beginning and end of a string.
+// The optional parameter `characterMask` specifies the additional stripped characters.
+func Trim(str string, characterMask ...string) string {
+	var DefaultTrimChars = string([]byte{
+		'\t', // Tab.
+		'\v', // Vertical tab.
+		'\n', // New line (line feed).
+		'\r', // Carriage return.
+		'\f', // New page.
+		' ',  // Ordinary space.
+		0x00, // NUL-byte.
+		0x85, // Delete.
+		0xA0, // Non-breaking space.
+	})
+	trimChars := DefaultTrimChars
+	if len(characterMask) > 0 {
+		trimChars += characterMask[0]
+	}
+	return strings.Trim(str, trimChars)
+}
+
+// merger []byte to single one
+func BytesCombine(pBytes ...[]byte) []byte {
+	return bytes.Join(pBytes, []byte(""))
+}
+
+// 将字符编码转换为utf-8
+func ConvertToUtf8(str string) string {
+	dec := mahonia.NewDecoder("GBK")
+	return dec.ConvertString(str)
+}
+
+// 数组去重--非排序数组
+func RemoveDuplication_map(arr []string) []string {
+	set := make(map[string]struct{}, len(arr))
+	j := 0
+	for _, v := range arr {
+		_, ok := set[v]
+		if ok {
+			continue
+		}
+		set[v] = struct{}{}
+		arr[j] = v
+		j++
+	}
+
+	return arr[:j]
+}
+
+// 数组去重--排序数组
+func RemoveDuplication_sort(arr []string) []string {
+	length := len(arr)
+	if length == 0 {
+		return arr
+	}
+
+	j := 0
+	for i := 1; i < length; i++ {
+		if arr[i] != arr[j] {
+			j++
+			if j < i {
+				swap(arr, i, j)
+			}
+		}
+	}
+
+	return arr[:j+1]
+}
+
+func swap(arr []string, a, b int) {
+	arr[a], arr[b] = arr[b], arr[a]
+}
+
+// 检查body是否关闭
+func CheckBodyClosed(body io.ReadCloser) bool {
+	buf := make([]byte, 1)
+	_, err := body.Read(buf)
+	if err == io.EOF || err == http.ErrBodyReadAfterClose {
+		return true
+	}
+	return false
+}
