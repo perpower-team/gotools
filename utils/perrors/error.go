@@ -24,13 +24,14 @@ var (
 	ERROR_3005   = ExtraCode(3005, "提交的数据不符合字典约束范围值", emptyStruct)
 	ERROR_3006   = ExtraCode(3006, "提交的数据校验不通过,验证失败", emptyStruct)
 	ERROR_3054   = ExtraCode(3054, "系统繁忙,请稍后再试", emptyStruct)
-	ERROR_4001   = ExtraCode(4001, "未授权", emptyStruct)
-	ERROR_4002   = ExtraCode(4002, "未知错误", emptyStruct)
+	ERROR_4001   = ExtraCode(4001, "账户未授权", emptyStruct)
+	ERROR_4002   = ExtraCode(4002, "设备登录已达上限", emptyStruct)
 	ERROR_4003   = ExtraCode(4003, "禁止访问", emptyStruct)
 	ERROR_4004   = ExtraCode(4004, "页面未定义", emptyStruct)
+	ERROR_4100   = ExtraCode(4100, "未知错误", emptyStruct)
 	ERROR_5000   = ExtraCode(5000, "内部服务异常", emptyStruct)
 	ERROR_5001   = ExtraCode(5001, "系统维护中", emptyStruct)
-	ERROR_9000   = ExtraCode(9000, "账户授权Token值已过期,请重新获取", emptyStruct)
+	ERROR_9000   = ExtraCode(9000, "账户授权Token值无效", emptyStruct)
 	ERROR_9001   = ExtraCode(9001, "账户异常,请联系管理员", emptyStruct)
 	ERROR_9002   = ExtraCode(9002, "账号/密码错误,请检查后重试", emptyStruct)
 	ERROR_9003   = ExtraCode(9003, "账号已存在", emptyStruct)
@@ -58,6 +59,7 @@ func Throwf(format string, args ...interface{}) error {
 	return gerror.NewCodef(ERROR_CODE, format, args...)
 }
 
+// 用于业务逻辑中主动抛出错误，并指定错误码
 func ThrowCode(code gcode.Code, message string) error {
 	return gerror.NewCode(code, message)
 }

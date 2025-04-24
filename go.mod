@@ -1,12 +1,12 @@
 module github.com/perpower-team/gotools
 
-go 1.22.0
+go 1.23.8
 
 require (
 	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394
 	github.com/disintegration/imaging v1.6.2
 	github.com/go-resty/resty/v2 v2.16.5
-	github.com/gogf/gf/v2 v2.8.3
+	github.com/gogf/gf/v2 v2.9.0
 	github.com/gomodule/redigo v1.9.2
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
@@ -30,9 +30,11 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grokify/html-strip-tags-go v0.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/magiconair/properties v1.8.9 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -48,10 +50,10 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xuri/efp v0.0.0-20240408161823-9ad904a10d6d // indirect
 	github.com/xuri/nfp v0.0.0-20240318013403-ab9948c2c4a7 // indirect
-	go.opentelemetry.io/otel v1.24.0 // indirect
-	go.opentelemetry.io/otel/metric v1.24.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.24.0 // indirect
-	go.opentelemetry.io/otel/trace v1.24.0 // indirect
+	go.opentelemetry.io/otel v1.32.0 // indirect
+	go.opentelemetry.io/otel/metric v1.32.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.32.0 // indirect
+	go.opentelemetry.io/otel/trace v1.32.0 // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
