@@ -17,8 +17,8 @@ import (
 var Oss = sOss{}
 
 type sOss struct {
-	config    *OssConfig
-	ossClient *oss.Client
+	Config    *OssConfig
+	OssClient *oss.Client
 }
 
 // OSS存储桶配置
@@ -51,7 +51,11 @@ type PolicyToken struct {
 
 // 实例化OSS客户端
 func (s *sOss) NewClient(conf *OssConfig) {
-	provider := credentials.NewStaticCredentialsProvider(conf.AccessKeyId, conf.AccessKeySecret, conf.SecurityToken)
+	provider := credentials.NewStaticCredentialsProvider(
+		conf.AccessKeyId,
+		conf.AccessKeySecret,
+		conf.SecurityToken,
+	)
 	cfg := oss.LoadDefaultConfig().
 		WithCredentialsProvider(provider).
 		WithRegion(conf.Region)
@@ -66,14 +70,14 @@ func (s *sOss) NewClient(conf *OssConfig) {
 		cfg = cfg.WithUseCName(true)
 	}
 
-	s.config = conf
-	s.ossClient = oss.NewClient(cfg)
+	s.Config = conf
+	s.OssClient = oss.NewClient(cfg)
 }
 
 // 生成签名
 func (s *sOss) GetPolicyToken(ctx context.Context, dir string) (policy *PolicyToken, err error) {
 	now := time.Now().Unix()
-	expireEnd := now + s.config.Duration
+	expireEnd := now + s.Config.Duration
 	tokenExpire := s.GetGMTISO8601(expireEnd)
 
 	config := &ConfigStruct{
@@ -95,12 +99,12 @@ func (s *sOss) GetPolicyToken(ctx context.Context, dir string) (policy *PolicyTo
 	}
 
 	encodedResult := base64.StdEncoding.EncodeToString(result)
-	h := hmac.New(sha1.New, []byte(s.config.AccessKeySecret))
+	h := hmac.New(sha1.New, []byte(s.Config.AccessKeySecret))
 	io.WriteString(h, encodedResult)
 	signedStr := base64.StdEncoding.EncodeToString(h.Sum(nil))
 
 	policy = &PolicyToken{
-		Host:      s.config.Host,
+		Host:      s.Config.Host,
 		Signature: signedStr,
 		Policy:    encodedResult,
 		Dir:       dir,
@@ -115,10 +119,10 @@ func (s *sOss) GetGMTISO8601(expireEnd int64) string {
 
 // 返回完整的文件地址
 func (s *sOss) GetFullObjectKey(objectKey string) (fullObjectKey string) {
-	if len(s.config.CdnUrl) > 0 {
-		fullObjectKey = fmt.Sprintf("%s/%s", s.config.CdnUrl, objectKey)
+	if len(s.Config.CdnUrl) > 0 {
+		fullObjectKey = fmt.Sprintf("%s/%s", s.Config.CdnUrl, objectKey)
 	} else {
-		fullObjectKey = fmt.Sprintf("%s/%s", s.config.Host, objectKey)
+		fullObjectKey = fmt.Sprintf("%s/%s", s.Config.Host, objectKey)
 	}
 	return
 }

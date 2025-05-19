@@ -27,6 +27,7 @@ type StsConfig struct {
 	Policy          StsConfig_Policy // 策略
 	RoleSessionName string           // 角色session名称
 	Endpoint        string           // 访问域名
+	Region          string           // 地域
 }
 
 type StsConfig_Policy struct {
@@ -49,6 +50,7 @@ func (s *sSts) NewStsClientWithAK(config *StsConfig) error {
 		AccessKeyId:     tea.String(config.AccessKeyId),
 		AccessKeySecret: tea.String(config.AccessKeySecret),
 		Endpoint:        tea.String(config.Endpoint),
+		RegionId:        tea.String(config.Region),
 	}
 
 	client, err := sts.NewClient(cfg)
