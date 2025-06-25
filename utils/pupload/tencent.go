@@ -9,11 +9,13 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 
-	"github.com/gogf/gf/v2/frame/g"
-	perpowerFuncs "github.com/perpower-team/gotools/funcs"
-	"github.com/perpower-team/gotools/utils/pcos"
+	"github.com/gogf/gf/v2/os/gfile"
+	perpowerFuncs "github.com/perpower-team/gotools/v2/funcs"
+	"github.com/perpower-team/gotools/v2/utils/perrors"
+	"github.com/perpower-team/gotools/v2/utils/ptencloud"
 	"github.com/tencentyun/cos-go-sdk-v5"
 	sts "github.com/tencentyun/qcloud-cos-sts-sdk/go"
 )
@@ -22,33 +24,44 @@ type Object = cos.Object
 type ObjectTag = cos.ObjectTaggingTag
 type CredentialResult = sts.CredentialResult
 
-type tencentCos struct {
-	config *pcos.CosConfig
+type TencentCos struct {
+	Uploader
+	config *ptencloud.CosConfig
+}
+
+func NewTencentCos(config ptencloud.CosConfig) *TencentCos {
+	return &TencentCos{
+		config: &config,
+	}
 }
 
 // 返回配置信息
-func (t *tencentCos) Config(ctx context.Context) pcos.CosConfig {
+func (t *TencentCos) Config(ctx context.Context) any {
 	return *t.config
 }
 
 // 返回完整的对象文件地址
 // objectKey: 对象地址
-func (t *tencentCos) GetFullObjectKey(objectKey string) string {
+func (t *TencentCos) GetFullObjectKey(objectKey string) string {
 	if len(t.config.CdnUrl) > 0 {
-		return t.config.CdnUrl + objectKey
+		return fmt.Sprintf("%s/%s", t.config.CdnUrl, objectKey)
 	}
-	return t.config.DefaultUrl + objectKey
+	return fmt.Sprintf("%s/%s", t.config.DefaultUrl, objectKey)
 }
 
-// 使用高级上传接口上传本地文件，上传接口根据用户文件的长度，自动切分数据
+// 上传本地文件
 // objectKey: string  文件对象
 // fileName: string 本地文件路径
 // hasHost: bool 返回objectKey时候加上域名地址
-func (t *tencentCos) UploadLocal(ctx context.Context, objectKey, fileName string, hasHost ...bool) (string, error) {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) DoUpload(ctx context.Context, objectKey, filePath string, hasHost ...bool) (string, error) {
+	if !gfile.Exists(filePath) {
+		return "", perrors.Throwf("上传文件: %s不存在", filePath)
+	}
+
+	client := ptencloud.Cos.NewClient(t.config)
 
 	_, _, err := client.Object.Upload(
-		ctx, objectKey, fileName, &cos.MultiUploadOptions{
+		ctx, objectKey, filePath, &cos.MultiUploadOptions{
 			PartSize:       t.config.PartSize,
 			ThreadPoolSize: 3,
 		},
@@ -58,7 +71,12 @@ func (t *tencentCos) UploadLocal(ctx context.Context, objectKey, fileName string
 		return "", err
 	}
 
-	if len(hasHost) > 0 && hasHost[0] {
+	needHost := true
+	if len(hasHost) > 0 {
+		needHost = hasHost[0]
+	}
+
+	if needHost {
 		return t.GetFullObjectKey(objectKey), nil
 	} else {
 		return objectKey, nil
@@ -70,8 +88,8 @@ func (t *tencentCos) UploadLocal(ctx context.Context, objectKey, fileName string
 // objectKey: string  文件对象
 // file: *multipart.FileHeader 本地文件
 // hasHost: bool 返回objectKey时候加上域名地址
-func (t *tencentCos) UploadForm(ctx context.Context, objectKey string, file *multipart.FileHeader, hasHost ...bool) (string, error) {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) UploadForm(ctx context.Context, objectKey string, file *multipart.FileHeader, hasHost ...bool) (string, error) {
+	client := ptencloud.Cos.NewClient(t.config)
 
 	filePath, err := perpowerFuncs.CreateTempPath(file)
 	if err != nil {
@@ -101,8 +119,8 @@ func (t *tencentCos) UploadForm(ctx context.Context, objectKey string, file *mul
 // objectKey: string  文件对象
 // file: *multipart.FileHeader 本地文件
 // hasHost: bool 返回objectKey时候加上域名地址
-func (t *tencentCos) Put(ctx context.Context, objectKey string, file *multipart.FileHeader, hasHost ...bool) (string, error) {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) Put(ctx context.Context, objectKey string, file *multipart.FileHeader, hasHost ...bool) (string, error) {
+	client := ptencloud.Cos.NewClient(t.config)
 
 	f, err := file.Open()
 	if err != nil {
@@ -122,20 +140,35 @@ func (t *tencentCos) Put(ctx context.Context, objectKey string, file *multipart.
 	}
 }
 
-// Delete 删除文件对象
-// objectKey: string 文件对象
-func (t *tencentCos) Delete(ctx context.Context, objectKey string) error {
-	client := pcos.NewClient(t.config)
+// Delete 删除一个或多个文件对象
+// objectKeys: 文件对象
+func (t *TencentCos) Delete(ctx context.Context, objectKeys ...string) (err error) {
+	if len(objectKeys) < 1 {
+		return
+	}
 
-	_, err := client.Object.Delete(ctx, objectKey)
+	client := ptencloud.Cos.NewClient(t.config)
+
+	obs := []cos.Object{}
+	for _, v := range objectKeys {
+		obs = append(obs, cos.Object{Key: strings.TrimSpace(v)})
+	}
+	opt := &cos.ObjectDeleteMultiOptions{
+		Objects: obs,
+		// 布尔值，这个值决定了是否启动 Quiet 模式
+		// 值为 true 启动 Quiet 模式，值为 false 则启动 Verbose 模式，默认值为 false
+		// Quiet: true,
+	}
+
+	_, _, err = client.Object.DeleteMulti(ctx, opt)
 	return err
 }
 
 // 下载对象到本地目录
 // objectKey: string 文件对象
 // filepath: string 本地文件路径
-func (t *tencentCos) Download(ctx context.Context, objectKey, filepath string) error {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) Download(ctx context.Context, objectKey, filepath string) error {
+	client := ptencloud.Cos.NewClient(t.config)
 
 	if ok, err := t.IsExist(ctx, objectKey); !ok || err != nil {
 		return errors.New("文件不存在")
@@ -151,8 +184,8 @@ func (t *tencentCos) Download(ctx context.Context, objectKey, filepath string) e
 // 下载对象到浏览器弹窗下载
 // objectKey: string 文件对象
 // fileName: string 下载保存的文件名
-func (t *tencentCos) DownloadWeb(ctx context.Context, w http.ResponseWriter, objectKey, fileName string) {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) DownloadWeb(ctx context.Context, w http.ResponseWriter, objectKey, fileName string) {
+	client := ptencloud.Cos.NewClient(t.config)
 
 	if ok, err := t.IsExist(ctx, objectKey); !ok || err != nil {
 		http.Error(w, "文件不存在", http.StatusNotFound)
@@ -177,8 +210,8 @@ func (t *tencentCos) DownloadWeb(ctx context.Context, w http.ResponseWriter, obj
 
 // 初始化分片上传, 并返回uploadID
 // objectKey: string  文件对象
-func (t *tencentCos) InitiateMultipartUpload(ctx context.Context, objectKey string) (string, error) {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) InitiateMultipartUpload(ctx context.Context, objectKey string) (string, error) {
+	client := ptencloud.Cos.NewClient(t.config)
 	v, _, err := client.Object.InitiateMultipartUpload(ctx, objectKey, nil)
 	if err != nil {
 		return "", err
@@ -192,8 +225,8 @@ func (t *tencentCos) InitiateMultipartUpload(ctx context.Context, objectKey stri
 // partNumber: int 分片号
 // data: []byte 文件数据
 // return: partETag, error
-func (t *tencentCos) UploadPart(ctx context.Context, objectKey, uploadID string, partNumber int, data []byte) (string, error) {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) UploadPart(ctx context.Context, objectKey, uploadID string, partNumber int, data []byte) (string, error) {
+	client := ptencloud.Cos.NewClient(t.config)
 
 	// 转换数据为bytes.Reader
 	byteReader := bytes.NewReader(data)
@@ -210,8 +243,8 @@ func (t *tencentCos) UploadPart(ctx context.Context, objectKey, uploadID string,
 // uploadID: string
 // objectParts: []Object
 // objectTags: []ObjectTag 对象标签
-func (t *tencentCos) CompleteMultipartUpload(ctx context.Context, objectKey, uploadID string, objectParts []Object, objectTags ...ObjectTag) error {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) CompleteMultipartUpload(ctx context.Context, objectKey, uploadID string, objectParts []Object, objectTags ...ObjectTag) error {
+	client := ptencloud.Cos.NewClient(t.config)
 
 	opt := &cos.CompleteMultipartUploadOptions{}
 	opt.Parts = objectParts
@@ -233,8 +266,8 @@ func (t *tencentCos) CompleteMultipartUpload(ctx context.Context, objectKey, upl
 // 终止分片上传并删除已上传的块
 // objectKey: string  文件对象
 // uploadID: string
-func (t *tencentCos) AbortMultipartUpload(ctx context.Context, objectKey, uploadID string) error {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) AbortMultipartUpload(ctx context.Context, objectKey, uploadID string) error {
+	client := ptencloud.Cos.NewClient(t.config)
 
 	_, err := client.Object.AbortMultipartUpload(ctx, objectKey, uploadID)
 	return err
@@ -243,18 +276,16 @@ func (t *tencentCos) AbortMultipartUpload(ctx context.Context, objectKey, upload
 // 判断指定对象是否存在
 // objectKey: string  文件对象
 // return: isExist, err
-func (t *tencentCos) IsExist(ctx context.Context, objectKey string) (bool, error) {
-	client := pcos.NewClient(t.config)
-
-	ok, err := client.Object.IsExist(ctx, objectKey)
-	return ok, err
+func (t *TencentCos) IsExist(ctx context.Context, objectKey string) (bool, error) {
+	client := ptencloud.Cos.NewClient(t.config)
+	return client.Object.IsExist(ctx, objectKey)
 }
 
 // 给对象设置标签
 // objectKey: string  文件对象
 // objectTags: []ObjectTag 对象标签
-func (t *tencentCos) PutTagging(ctx context.Context, objectKey string, objectTags ...ObjectTag) error {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) PutTagging(ctx context.Context, objectKey string, objectTags ...ObjectTag) error {
+	client := ptencloud.Cos.NewClient(t.config)
 	opt := &cos.ObjectPutTaggingOptions{
 		TagSet: objectTags,
 	}
@@ -264,16 +295,16 @@ func (t *tencentCos) PutTagging(ctx context.Context, objectKey string, objectTag
 
 // 删除对象标签
 // objectKey: string  文件对象
-func (t *tencentCos) DeleteTagging(ctx context.Context, objectKey string) error {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) DeleteTagging(ctx context.Context, objectKey string) error {
+	client := ptencloud.Cos.NewClient(t.config)
 	_, err := client.Object.DeleteTagging(ctx, objectKey)
 	return err
 }
 
 // 查询对象标签
 // objectKey: string  文件对象
-func (t *tencentCos) GetTagging(ctx context.Context, objectKey string) ([]ObjectTag, error) {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) GetTagging(ctx context.Context, objectKey string) ([]ObjectTag, error) {
+	client := ptencloud.Cos.NewClient(t.config)
 	resp, _, err := client.Object.GetTagging(ctx, objectKey)
 	return resp.TagSet, err
 }
@@ -282,8 +313,8 @@ func (t *tencentCos) GetTagging(ctx context.Context, objectKey string) ([]Object
 // objectKey: string  文件对象
 // expired: time.Duration URL有效期
 // return: presignedUrl, err
-func (t *tencentCos) GetPresignedURL(ctx context.Context, objectKey string, expired time.Duration) (string, error) {
-	client := pcos.NewClient(t.config)
+func (t *TencentCos) GetPresignedURL(ctx context.Context, objectKey string, expired time.Duration) (string, error) {
+	client := ptencloud.Cos.NewClient(t.config)
 
 	if ok, err := t.IsExist(ctx, objectKey); !ok || err != nil {
 		return "", errors.New("文件不存在")
@@ -300,7 +331,7 @@ func (t *tencentCos) GetPresignedURL(ctx context.Context, objectKey string, expi
 // 根据预签名URL下载对象
 // presignedUrl: string 预签名URL
 // fileName: string 下载保存文件名
-func (t *tencentCos) DownloadPresignedObject(w http.ResponseWriter, presignedUrl, fileName string) {
+func (t *TencentCos) DownloadPresignedObject(w http.ResponseWriter, presignedUrl, fileName string) {
 	resp, err := http.Get(presignedUrl)
 	if err != nil {
 		http.Error(w, "下载失败", http.StatusInternalServerError)
@@ -317,7 +348,7 @@ func (t *tencentCos) DownloadPresignedObject(w http.ResponseWriter, presignedUrl
 }
 
 // 流式下载文件
-func (t *tencentCos) DownloadStreamFile(w http.ResponseWriter, respBody io.ReadCloser, fileName string) {
+func (t *TencentCos) DownloadStreamFile(w http.ResponseWriter, respBody io.ReadCloser, fileName string) {
 	w.Header().Set("Content-Type", "application/octet-stream") // 默认让浏览器下载文件
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
 	w.Header().Set("Cache-Control", "no-cache")
@@ -350,68 +381,4 @@ func (t *tencentCos) DownloadStreamFile(w http.ResponseWriter, respBody io.ReadC
 		// 刷新缓冲区，确保数据被立即发送
 		w.(http.Flusher).Flush()
 	}
-}
-
-// 获取临时密钥
-func (t *tencentCos) GetTempKey(ctx context.Context) (resp *CredentialResult, err error) {
-	stsClient := sts.NewClient(
-		t.config.SecretId,  // 用户的 SecretId
-		t.config.SecretKey, // 用户的 SecretKey
-		nil,
-		sts.Host("sts.tencentcloudapi.com"), // 设置域名, 默认域名sts.tencentcloudapi.com
-		sts.Scheme("https"),                 // 设置协议, 默认为https，公有云sts获取临时密钥不允许走http，特殊场景才需要设置http
-	)
-	// 策略概述 https://cloud.tencent.com/document/product/436/18023
-	policyDefault := sts.CredentialPolicyStatement{
-		Action: []string{
-			// 简单上传
-			"name/cos:PostObject",
-			"name/cos:PutObject",
-			// 分片上传
-			"name/cos:InitiateMultipartUpload",
-			"name/cos:ListMultipartUploads",
-			"name/cos:ListParts",
-			"name/cos:UploadPart",
-			"name/cos:CompleteMultipartUpload",
-		},
-		Effect: "allow",
-		Resource: []string{
-			"qcs::cos:" + t.config.Region + ":uid/" + t.config.AppId + ":" + t.config.Bucket + "/*",
-		},
-		Condition: map[string]map[string]interface{}{
-			"string_like_if_exist": {
-				"cos:content-type": []string{"image/*", "application/xml", "application/octet-stream", "video/*"},
-			},
-		},
-	}
-
-	if !g.IsEmpty(t.config.Action) {
-		policyDefault.Action = t.config.Action
-	}
-
-	if !g.IsEmpty(t.config.Resource) {
-		resource := make([]string, 0)
-		for _, v := range t.config.Resource {
-			resource = append(resource, fmt.Sprintf("qcs::cos:%s:uid/%s:%s/%s", t.config.Region, t.config.AppId, t.config.Bucket, v))
-		}
-		policyDefault.Resource = resource
-	}
-
-	if !g.IsEmpty(t.config.Condition) {
-		policyDefault.Condition = t.config.Condition
-	}
-
-	opt := &sts.CredentialOptions{
-		DurationSeconds: int64(time.Hour.Seconds()),
-		Region:          t.config.Region,
-		Policy: &sts.CredentialPolicy{
-			Statement: []sts.CredentialPolicyStatement{
-				policyDefault,
-			},
-		},
-	}
-
-	// 请求临时密钥
-	resp, err = stsClient.GetCredential(opt)
-	return
 }

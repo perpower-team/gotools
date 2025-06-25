@@ -1,9 +1,13 @@
-package perpowerFuncs
+package funcs
 
 import (
 	"bytes"
+	"crypto/md5"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -199,4 +203,37 @@ func CheckBodyClosed(body io.ReadCloser) bool {
 		return true
 	}
 	return false
+}
+
+// 获取文件md5哈希值
+func GetFileMD5(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
+
+// GetLocalIP get local IP with string format
+func GetLocalIP() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+	for _, address := range addrs {
+		// 检查ip地址判断是否回环地址
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+	return "127.0.0.1", nil
 }

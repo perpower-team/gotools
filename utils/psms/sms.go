@@ -1,26 +1,34 @@
-// 短信发送工具包
+// 多平台短信发送
 package psms
 
-type Sms struct {
-	TencentSms  *tencentSms
-	PlasgateSms *plasgateSms
+import "context"
+
+const (
+	SMS_DRIVER_TENCENT  = "tencent"  // 腾讯云短信
+	SMS_DRIVER_ALIYUN   = "aliyun"   // 阿里云短信
+	SMS_DRIVER_PLASGATE = "plasgate" // plasgate 短信
+)
+
+// 定义接口
+type Sms interface {
+	Send(ctx context.Context, mobile []string, params map[string]any) (bool, any, error)
 }
 
-// Instance
-// conf: interface{} 短信发送方式配置
-func Instance(conf interface{}) (s Sms, typ interface{}) {
-	switch confType := conf.(type) { // 考虑到switch类型断言的问题，将结果分配给一个变量，否则可能会触发panic
-	case TsmsConfig:
-		smsConf := conf.(TsmsConfig)
-		s.TencentSms = &tencentSms{
-			config: &smsConf,
-		}
-		typ = confType
-	case PlasgateConfig:
-		smsConf := conf.(PlasgateConfig)
-		s.PlasgateSms = &plasgateSms{
-			config: &smsConf,
-		}
+// 实例化
+// driver: 发送平台
+// config: 配置
+func NewAdapter(driver string, config any) Sms {
+	switch driver {
+	case SMS_DRIVER_TENCENT:
+		cfg := config.(TsmsConfig)
+		return NewTencentSms(cfg)
+	case SMS_DRIVER_ALIYUN:
+		cfg := config.(AliyunSmsConfig)
+		return NewAliyunSms(cfg)
+	case SMS_DRIVER_PLASGATE:
+		cfg := config.(PlasgateConfig)
+		return NewPlasgateSms(cfg)
 	}
-	return s, typ
+
+	return nil
 }

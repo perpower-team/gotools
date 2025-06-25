@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"time"
 
@@ -115,14 +114,4 @@ func (s *sOss) GetPolicyToken(ctx context.Context, dir string) (policy *PolicyTo
 
 func (s *sOss) GetGMTISO8601(expireEnd int64) string {
 	return time.Unix(expireEnd, 0).UTC().Format("2006-01-02T15:04:05Z")
-}
-
-// 返回完整的文件地址
-func (s *sOss) GetFullObjectKey(objectKey string) (fullObjectKey string) {
-	if len(s.Config.CdnUrl) > 0 {
-		fullObjectKey = fmt.Sprintf("%s/%s", s.Config.CdnUrl, objectKey)
-	} else {
-		fullObjectKey = fmt.Sprintf("%s/%s", s.Config.Host, objectKey)
-	}
-	return
 }

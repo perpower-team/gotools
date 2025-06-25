@@ -14,20 +14,20 @@ import (
 var Sts = sSts{}
 
 type sSts struct {
-	config    *StsConfig
-	stsClient *sts.Client
+	Config    *StsConfig
+	StsClient *sts.Client
 }
 
 // STS配置
 type StsConfig struct {
-	AccessKeyId     string           // AccessKeyId
-	AccessKeySecret string           // AccessKeySecret
-	Duration        int64            // 临时凭证有效期, 单位秒
-	Arn             string           // 角色arn
-	Policy          StsConfig_Policy // 策略
-	RoleSessionName string           // 角色session名称
-	Endpoint        string           // 访问域名
-	Region          string           // 地域
+	AccessKeyId     string            // AccessKeyId
+	AccessKeySecret string            // AccessKeySecret
+	Duration        int64             // 临时凭证有效期, 单位秒
+	Policy          *StsConfig_Policy // 策略
+	RoleArn         string            // 角色arn
+	RoleSessionName string            // 角色session名称
+	Endpoint        string            // 访问域名
+	Region          string            // 地域
 }
 
 type StsConfig_Policy struct {
@@ -36,9 +36,10 @@ type StsConfig_Policy struct {
 }
 
 type StsConfig_Policy_Statement struct {
-	Action   []string // 策略操作
-	Effect   string   // 策略效果
-	Resource []string // 资源
+	Action    []string // 策略操作
+	Effect    string   // 策略效果
+	Resource  []string // 资源
+	Condition *map[string]map[string]interface{}
 }
 
 type StsToken = sts.AssumeRoleResponseBodyCredentials
@@ -58,23 +59,28 @@ func (s *sSts) NewStsClientWithAK(config *StsConfig) error {
 		return err
 	}
 
-	s.stsClient = client
-	s.config = config
+	s.StsClient = client
+	s.Config = config
 
 	return nil
 }
 
 // 获取STS TOKEN
 func (s *sSts) GetStsToken(ctx context.Context) (resp *StsToken, err error) {
-	policy, _ := gjson.EncodeString(s.config.Policy)
 	request := &sts.AssumeRoleRequest{
-		DurationSeconds: tea.Int64(s.config.Duration),
-		RoleArn:         tea.String(s.config.Arn),
-		Policy:          tea.String(policy),
-		RoleSessionName: tea.String(s.config.RoleSessionName),
+		DurationSeconds: tea.Int64(s.Config.Duration),
+		RoleArn:         tea.String(s.Config.RoleArn),
+		RoleSessionName: tea.String(s.Config.RoleSessionName),
 	}
 
-	response, err := s.stsClient.AssumeRole(request)
+	// 添加策略
+	if s.Config.Policy != nil {
+		policy, _ := gjson.EncodeString(s.Config.Policy)
+
+		request.Policy = tea.String(policy)
+	}
+
+	response, err := s.StsClient.AssumeRole(request)
 	if err != nil || g.IsNil(response) || g.IsNil(response.Body) {
 		return
 	}
@@ -85,20 +91,39 @@ func (s *sSts) GetStsToken(ctx context.Context) (resp *StsToken, err error) {
 }
 
 // 获取访问凭证
-func (s *sSts) GetTempKey(ctx context.Context, stsToken StsToken) (resp *CredentialTempKey, err error) {
-	config := new(credentials.Config).
-		SetType("sts").
-		// 从环境变量中获取AccessKey Id。
-		SetAccessKeyId(*stsToken.AccessKeyId).
-		// 从环境变量中获取AccessKey Secret
-		SetAccessKeySecret(*stsToken.AccessKeySecret).
-		// 从环境变量中获取STS临时凭证。
-		SetSecurityToken(*stsToken.SecurityToken)
+func (s *sSts) GetTempKey(ctx context.Context) (resp *CredentialTempKey, err error) {
+	var (
+		stsToken *StsToken
+		config   *credentials.Config
+	)
+	if len(s.Config.RoleArn) > 0 { // 角色扮演方式
+		stsToken, err = s.GetStsToken(ctx)
+		if err != nil || g.IsNil(stsToken) {
+			return
+		}
+
+		config = new(credentials.Config).
+			SetType("sts").
+			// AccessKey Id。
+			SetAccessKeyId(*stsToken.AccessKeyId).
+			// AccessKey Secret
+			SetAccessKeySecret(*stsToken.AccessKeySecret).
+			// STS临时凭证。
+			SetSecurityToken(*stsToken.SecurityToken)
+	} else {
+		config = new(credentials.Config).
+			SetType("access_key").
+			// AccessKey Id。
+			SetAccessKeyId(s.Config.AccessKeyId).
+			// AccessKey Secret
+			SetAccessKeySecret(s.Config.AccessKeySecret)
+	}
 
 	stsCredential, err := credentials.NewCredential(config)
 	if err != nil {
 		return
 	}
+
 	resp, err = stsCredential.GetCredential()
 
 	return

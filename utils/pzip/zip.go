@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/perpower-team/gotools/utils/pfile"
+	"github.com/perpower-team/gotools/v2/utils/pfile"
 )
 
 var Zip = gzip{}

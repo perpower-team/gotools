@@ -1,4 +1,4 @@
-package perpowerFuncs
+package funcs
 
 // MaxMin 返回切片中的最大值和最小值。
 // 如果切片为空，则返回 (0, 0, false)，其中最后一个布尔值表示结果是否有效。

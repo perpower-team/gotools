@@ -1,4 +1,4 @@
-package perpowerFuncs
+package funcs
 
 // 返回多个int类型数值中最大的那个
 func MaxInt(nums ...int) (max int) {

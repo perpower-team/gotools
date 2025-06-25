@@ -4,11 +4,10 @@ package pmailer
 import (
 	"bytes"
 	"crypto/tls"
-	"fmt"
 	"html/template"
 	"reflect"
 
-	perpowerFuncs "github.com/perpower-team/gotools/funcs"
+	perpowerFuncs "github.com/perpower-team/gotools/v2/funcs"
 
 	"gopkg.in/gomail.v2"
 )
@@ -65,10 +64,8 @@ func Send(smtp EmailSererConfig, params EmailConfig) (bool, error) {
 		for _, file := range params.Attach {
 			path := perpowerFuncs.IsPathExist(file.Filename)
 			if !path {
-				fmt.Println("Error:", file.Filename, "does not exist")
 				continue
 			} else {
-				fmt.Println("uploading", file.Filename, "...")
 				m.Attach(file.Filename, file.Settings...)
 			}
 		}

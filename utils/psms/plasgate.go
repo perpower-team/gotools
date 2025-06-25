@@ -2,24 +2,24 @@
 package psms
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/perpower-team/gotools/utils/phttp"
 )
 
-type plasgateSms struct {
+type PlasgateSms struct {
+	Sms
 	config *PlasgateConfig
 }
 
 // 定义传参结构体
 type PlasgateConfig struct {
-	PrivateKey string   // private key
-	SecretKey  string   // secret key
-	Sender     string   //短信签名
-	Mobile     []string //发送手机号
+	PrivateKey string // private key
+	SecretKey  string // secret key
+	Sender     string //短信签名
 }
 
 // 单个号码参数结构体
@@ -61,42 +61,54 @@ const (
 	batch_sender_url  = "https://cloudapi.plasgate.com/rest/batch-send"
 )
 
-// 发送单个号码短信
-func (s *plasgateSms) SendSms(content string, debug bool, mobile string) (res bool, response *SingleSendResponse, err error) {
-	httpClient := phttp.NewRequest().SetDebug(debug).SetHeader("X-Secret", s.config.SecretKey)
-	res, response, err = s.sendSingle(httpClient, content, mobile)
-
-	return
+// 实例化
+func NewPlasgateSms(config PlasgateConfig) *PlasgateSms {
+	return &PlasgateSms{
+		config: &config,
+	}
 }
 
-// 批量发送短信
-func (s *plasgateSms) SendBatchSms(content string, debug bool, mobile ...string) (res bool, response *resty.Response, err error) {
-	httpClient := phttp.NewRequest().SetDebug(debug).SetHeader("X-Secret", s.config.SecretKey)
+// 发送短信
+func (s *PlasgateSms) Send(ctx context.Context, mobile []string, params map[string]any) (res bool, response any, err error) {
+	if len(mobile) == 0 {
+		return false, nil, fmt.Errorf("号码不能为空")
+	}
 
-	res, response, err = s.sendBatch(httpClient, content, mobile...)
+	httpClient := resty.New().R()
+	if _, ok := params["debug"]; ok {
+		httpClient = httpClient.SetDebug(params["debug"].(bool))
+	}
+	httpClient = httpClient.SetHeader("X-Secret", s.config.SecretKey)
+
+	if len(mobile) == 1 {
+		res, response, err = s.sendSingle(httpClient, params["content"].(string), mobile[0])
+	} else {
+		res, response, err = s.sendBatch(httpClient, params["content"].(string), mobile...)
+	}
+
 	return
 }
 
 // 发送单个手机号
-func (s *plasgateSms) sendSingle(client *resty.Request, content string, mobile string) (res bool, response *SingleSendResponse, err error) {
+func (s *PlasgateSms) sendSingle(client *resty.Request, content string, mobile string) (res bool, response *resty.Response, err error) {
 	var (
-		resp *resty.Response
+		resp *SingleSendResponse
 	)
 	client = client.SetBody(SingleSendParameter{
 		Sender:  s.config.Sender,
 		To:      mobile,
 		Content: content,
 	})
-	resp, err = client.SetQueryString(fmt.Sprintf("private_key=%s", s.config.PrivateKey)).Post(single_sender_url)
-	if err != nil || g.IsNil(resp) {
+	response, err = client.SetQueryString(fmt.Sprintf("private_key=%s", s.config.PrivateKey)).Post(single_sender_url)
+	if err != nil || g.IsNil(response) {
 		return
 	}
 
-	if err = gjson.Unmarshal(resp.Body(), &response); err != nil {
+	if err = gjson.Unmarshal(response.Body(), &resp); err != nil {
 		return
 	}
 
-	if response.MessageCount != nil && *response.MessageCount > 0 {
+	if resp.MessageCount != nil && *resp.MessageCount > 0 {
 		res = true
 	}
 
@@ -104,8 +116,8 @@ func (s *plasgateSms) sendSingle(client *resty.Request, content string, mobile s
 }
 
 // 批量发送多个手机号
-func (s *plasgateSms) sendBatch(client *resty.Request, content string, mobile ...string) (resp bool, response *resty.Response, err error) {
-	client = client.SetDebug(false).SetBody(BatchSendParameter{
+func (s *PlasgateSms) sendBatch(client *resty.Request, content string, mobile ...string) (res bool, response *resty.Response, err error) {
+	client = client.SetBody(BatchSendParameter{
 		Globals: BatchSendParameter_Global{
 			Sender: s.config.Sender,
 		},
@@ -117,5 +129,8 @@ func (s *plasgateSms) sendBatch(client *resty.Request, content string, mobile ..
 		},
 	})
 	response, err = client.SetQueryString(fmt.Sprintf("private_key=%s", s.config.PrivateKey)).Post(batch_sender_url)
+	if err == nil && !g.IsNil(response) {
+		res = true
+	}
 	return
 }

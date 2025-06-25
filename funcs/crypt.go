@@ -1,4 +1,4 @@
-package perpowerFuncs
+package funcs
 
 import (
 	"context"
