@@ -3,7 +3,7 @@ package phuaweicloud
 import (
 	"context"
 
-	obs "github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
+	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
 )
 
 var Obs = sObs{}
@@ -26,10 +26,10 @@ type ObsConfig struct {
 // 实例化客户端
 func (s *sObs) NewClient(config *ObsConfig) (client *obs.ObsClient, err error) {
 	client, err = obs.New(
-		s.Config.AccessKey,
-		s.Config.SecretAccessKey,
-		s.Config.Endpoint,
-		obs.WithSecurityToken(s.Config.SecurityToken),
+		config.AccessKey,
+		config.SecretAccessKey,
+		config.Endpoint,
+		obs.WithSecurityToken(config.SecurityToken),
 		obs.WithRequestContext(context.Background()),
 	)
 	if err != nil {

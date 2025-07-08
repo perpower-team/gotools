@@ -16,6 +16,7 @@ import (
 	"github.com/axgle/mahonia"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/thinkeridea/go-extend/exunicode/exutf8"
+	"golang.org/x/exp/constraints"
 )
 
 // SortNumberStrings 按数值大小排序数字字符串切片
@@ -236,4 +237,14 @@ func GetLocalIP() (string, error) {
 		}
 	}
 	return "127.0.0.1", nil
+}
+
+func Clamp[T constraints.Ordered](v, min, max T) T {
+	if v < min {
+		return min
+	}
+	if v > max {
+		return max
+	}
+	return v
 }
