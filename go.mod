@@ -12,6 +12,8 @@ require (
 	github.com/aliyun/aliyun-log-go-sdk v0.1.101
 	github.com/aliyun/credentials-go v1.4.5
 	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394
+	github.com/elastic/go-elasticsearch/v7 v7.17.10
+	github.com/elastic/go-elasticsearch/v8 v8.17.0
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/gogf/gf/v2 v2.9.0
 	github.com/gomodule/redigo v1.9.2
@@ -24,7 +26,9 @@ require (
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.61
 	github.com/tencentyun/qcloud-cos-sts-sdk v0.0.0-20241118064430-63a76784514f
 	github.com/thinkeridea/go-extend v1.3.2
+	github.com/ulule/limiter/v3 v3.11.2
 	golang.org/x/crypto v0.39.0
+	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )
 
@@ -55,6 +59,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dennwc/varint v1.0.0 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.6.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
@@ -108,7 +113,6 @@ require (
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/exp v0.0.0-20221031165847-c99f073a8326 // indirect
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
