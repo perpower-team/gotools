@@ -19,13 +19,22 @@ type V8 struct {
 
 // NewClient 实例化客户端
 func (v8 *V8) NewClient(conf config.Config) (*V8, error) {
-	client, err := es8.NewClient(es8.Config{
+	cfg := es8.Config{
 		Addresses:  conf.Nodes,
 		Username:   conf.Username,
 		Password:   conf.Password,
-		APIKey:     conf.ApiKey,
 		MaxRetries: conf.MaxRetries,
-	})
+	}
+
+	if len(conf.ApiKey) > 0 {
+		cfg.APIKey = conf.ApiKey
+	}
+
+	if conf.Transport != nil {
+		cfg.Transport = conf.Transport
+	}
+
+	client, err := es8.NewClient(cfg)
 	if err != nil {
 		return nil, err
 	}

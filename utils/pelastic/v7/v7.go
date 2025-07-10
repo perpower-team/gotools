@@ -19,13 +19,22 @@ type V7 struct {
 
 // NewClient 实例化客户端
 func (v7 *V7) NewClient(conf config.Config) (*V7, error) {
-	client, err := es7.NewClient(es7.Config{
+	cfg := es7.Config{
 		Addresses:  conf.Nodes,
 		Username:   conf.Username,
 		Password:   conf.Password,
-		APIKey:     conf.ApiKey,
 		MaxRetries: conf.MaxRetries,
-	})
+	}
+
+	if len(conf.ApiKey) > 0 {
+		cfg.APIKey = conf.ApiKey
+	}
+
+	if conf.Transport != nil {
+		cfg.Transport = conf.Transport
+	}
+
+	client, err := es7.NewClient(cfg)
 	if err != nil {
 		return nil, err
 	}
