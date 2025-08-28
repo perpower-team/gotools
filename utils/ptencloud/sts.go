@@ -82,6 +82,11 @@ func (s *sSts) GetTempKey(ctx context.Context) (resp *CredentialResult, err erro
 			Version:   s.Config.Policy.Version,
 			Statement: statement,
 		}
+	} else {
+		opt.Policy = &sts.CredentialPolicy{
+			Version:   "2.0",
+			Statement: nil,
+		}
 	}
 
 	// 请求临时密钥

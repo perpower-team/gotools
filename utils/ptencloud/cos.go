@@ -32,11 +32,7 @@ type CosConfig struct {
 
 // 初始化COS client
 func (s *sCos) NewClient(config *CosConfig) *cos.Client {
-	parseUrl := config.DefaultUrl
-	if len(config.CdnUrl) > 0 {
-		parseUrl = config.CdnUrl
-	}
-	u, _ := url.Parse(parseUrl)
+	u, _ := url.Parse(config.DefaultUrl)
 	b := &cos.BaseURL{BucketURL: u}
 	client := cos.NewClient(b, &http.Client{
 		Transport: &cos.AuthorizationTransport{
