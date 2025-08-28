@@ -11,7 +11,7 @@ import (
 
 	"github.com/axgle/mahonia"
 
-	perpowerFuncs "github.com/perpower-team/gotools/funcs"
+	perpowerFuncs "github.com/perpower-team/gotools/v2/funcs"
 )
 
 var Unzip = gunzip{}
@@ -56,8 +56,8 @@ func (z *gunzip) ReadContent(filename string) ([]FileInfo, error) {
 }
 
 // 判断是否是目录
-func (z *gunzip) IsDir(content []byte) bool {
-	info, err := os.Stat(string(content))
+func (z *gunzip) IsDir(path string) bool {
+	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		// path does not exist
 		return false
