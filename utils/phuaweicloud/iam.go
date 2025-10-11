@@ -19,11 +19,11 @@ type sIam struct {
 }
 
 type IamConfig struct {
-	AccessKey       string
-	SecretAccessKey string
-	ProjectId       string
-	Endpoint        string
-	Region          string
+	AccessKey       string            // AccessKeyId
+	SecretAccessKey string            // AccessKeySecret
+	ProjectId       string            // 项目ID
+	Endpoint        string            // 节点
+	Region          string            // 地域
 	Duration        int32             // 临时凭证有效期, 单位秒, 有效时间为15min至24h
 	Policy          *StsConfig_Policy // 策略信息
 }

@@ -38,6 +38,7 @@ func (s *sPerLogs) New(config *PerLogsConfig) *sPerLogs {
 
 // 日志上报
 func (s *sPerLogs) Report(ctx context.Context, logTime int64, module string, logData map[string]string) (err error) {
+	ParseLogMessage(&logData)
 	_, err = resty.New().
 		SetDebug(s.Config.Debug).
 		R().

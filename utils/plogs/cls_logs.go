@@ -50,6 +50,7 @@ func (s *sClsLogs) Report(ctx context.Context, logTime int64, module string, log
 	producerInstance.Start()
 
 	// 构建日志
+	ParseLogMessage(&logData)
 	log := cls.NewCLSLog(logTime, logData)
 
 	producerInstance.SendLog(s.Config.TopicId, log, s.Config.Callback)
