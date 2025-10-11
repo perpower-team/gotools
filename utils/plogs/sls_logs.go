@@ -56,6 +56,7 @@ func (s *sSlsLogs) Report(ctx context.Context, logTime int64, module string, log
 	producerInstance.Start() // 启动producer实例
 
 	// 发送日志
+	ParseLogMessage(&logData)
 	log := producer.GenerateLog(uint32(time.UnixMilli(logTime).Unix()), logData)
 	source, _ := funcs.GetLocalIP()
 	producerInstance.SendLogWithCallBack(s.Config.ProjectName, s.Config.LogstorName, module, source, log, s.Config.Callback)

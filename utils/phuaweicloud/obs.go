@@ -17,7 +17,7 @@ type ObsConfig struct {
 	AccessKey       string // 临时AK
 	SecretAccessKey string // 临时SK
 	SecurityToken   string // SecurityToken
-	Endpoint        string
+	Endpoint        string // 节点
 	Bucket          string // 存储桶名称
 	DefaultUrl      string // 默认访问域名
 	CdnUrl          string // 自定义域名/加速域名
