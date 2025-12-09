@@ -15,7 +15,6 @@ package psnowflake
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/perpower-team/gotools/v2/utils/predis"
 
@@ -24,7 +23,6 @@ import (
 )
 
 const (
-	epoch             = int64(1675180800000)                           // 设置起始时间(时间戳/毫秒)：2023-02-01 00:00:00，定义之后不能随便修改，否则可能出现相同ID，有效期69年
 	timestampBits     = uint(41)                                       // 时间戳占用位数
 	datacenteridBits  = uint(5)                                        // 数据中心id所占位数
 	workeridBits      = uint(5)                                        // 机器id所占位数
@@ -36,7 +34,7 @@ const (
 	workeridShift     = sequenceBits                                   // 机器id左移位数
 	datacenteridShift = sequenceBits + workeridBits                    // 数据中心id左移位数
 	timestampShift    = sequenceBits + workeridBits + datacenteridBits // 时间戳左移位数
-	onceNums          = 5000                                           //单次预生成ID数量
+	onceNums          = 10000                                          //单次预生成ID数量
 	recreatePercent   = 20                                             //预生成百分比阀值
 )
 
@@ -48,20 +46,29 @@ type Snowflake struct {
 	sequence     int64
 }
 
-var redisClient *predis.Client
+var (
+	epoch       = int64(1735660800435) // 设置起始时间(时间戳/毫秒)：2025-01-01 00:00:00，定义之后不能随便修改，否则可能出现相同ID
+	redisClient *predis.Client
+)
 
 // NewSnowflake
 // redisObj： *predis.Client 已经实例化的redis链接对象
 // datacenterid: int64
 // workerid: int64
-func NewSnowflake(redisObj *predis.Client, datacenterid, workerid int64) (*Snowflake, error) {
+func NewSnowflake(redisObj *predis.Client, datacenterid, workerid int64, epochTimeStamp ...int64) (*Snowflake, error) {
 	redisClient = redisObj
+	if len(epochTimeStamp) > 0 {
+		epoch = epochTimeStamp[0]
+	}
+
 	if datacenterid < 0 || datacenterid > datacenteridMax {
 		return nil, fmt.Errorf("datacenterid must be between 0 and %d", datacenteridMax-1)
 	}
+
 	if workerid < 0 || workerid > workeridMax {
 		return nil, fmt.Errorf("workerid must be between 0 and %d", workeridMax-1)
 	}
+
 	return &Snowflake{
 		timestamp:    0,
 		datacenterid: datacenterid,
@@ -148,7 +155,7 @@ func (s *Snowflake) Produce(nums int, keyName string) (int, error) {
 			continue
 		}
 		s.timestamp = now
-		r := gconv.String(int64((t)<<timestampShift | (s.datacenterid << datacenteridShift) | (s.workerid << workeridShift) | (s.sequence)))
+		r := gconv.String(uint64((t)<<timestampShift | (s.datacenterid << datacenteridShift) | (s.workerid << workeridShift) | (s.sequence)))
 		scoreElements = append(scoreElements, r)
 	}
 
@@ -157,36 +164,4 @@ func (s *Snowflake) Produce(nums int, keyName string) (int, error) {
 
 	s.Unlock()
 	return count, err
-}
-
-// 获取数据中心ID和机器ID
-func GetDeviceID(sid int64) (datacenterid, workerid int64) {
-	datacenterid = (sid >> datacenteridShift) & datacenteridMax
-	workerid = (sid >> workeridShift) & workeridMax
-	return
-}
-
-// 获取时间戳
-func GetTimestamp(sid int64) (timestamp int64) {
-	timestamp = (sid >> timestampShift) & timestampMax
-	return
-}
-
-// 获取创建ID时的时间戳
-func GetGenTimestamp(sid int64) (timestamp int64) {
-	timestamp = GetTimestamp(sid) + epoch
-	return
-}
-
-// 获取创建ID时的时间字符串(精度：秒)
-func GetGenTime(sid int64) (t string) {
-	// 需将GetGenTimestamp获取的时间戳/1000转换成秒
-	t = time.Unix(GetGenTimestamp(sid)/1000, 0).Format("2006-01-02 15:04:05")
-	return
-}
-
-// 获取时间戳已使用的占比：范围（0.0 - 1.0）
-func GetTimestampStatus() (state float64) {
-	state = float64((getMilliStamp() - epoch)) / float64(timestampMax)
-	return
 }
