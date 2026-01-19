@@ -184,7 +184,7 @@ func RemoveDuplication_sort(arr []string) []string {
 		if arr[i] != arr[j] {
 			j++
 			if j < i {
-				swap(arr, i, j)
+				Swap(arr, i, j)
 			}
 		}
 	}
@@ -192,7 +192,7 @@ func RemoveDuplication_sort(arr []string) []string {
 	return arr[:j+1]
 }
 
-func swap(arr []string, a, b int) {
+func Swap(arr []string, a, b int) {
 	arr[a], arr[b] = arr[b], arr[a]
 }
 
