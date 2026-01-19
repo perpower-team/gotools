@@ -14,6 +14,7 @@ import (
 	"unsafe"
 
 	"github.com/axgle/mahonia"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/thinkeridea/go-extend/exunicode/exutf8"
 )
@@ -183,7 +184,7 @@ func RemoveDuplication_sort(arr []string) []string {
 		if arr[i] != arr[j] {
 			j++
 			if j < i {
-				swap(arr, i, j)
+				Swap(arr, i, j)
 			}
 		}
 	}
@@ -191,7 +192,7 @@ func RemoveDuplication_sort(arr []string) []string {
 	return arr[:j+1]
 }
 
-func swap(arr []string, a, b int) {
+func Swap(arr []string, a, b int) {
 	arr[a], arr[b] = arr[b], arr[a]
 }
 
@@ -236,4 +237,12 @@ func GetLocalIP() (string, error) {
 		}
 	}
 	return "127.0.0.1", nil
+}
+
+// 空值转换为nil,主要用于json类型字段的值处理
+func EmptyConvert(value any) any {
+	if g.IsEmpty(value) {
+		return nil
+	}
+	return value
 }
