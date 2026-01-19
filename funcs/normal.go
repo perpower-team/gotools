@@ -14,6 +14,7 @@ import (
 	"unsafe"
 
 	"github.com/axgle/mahonia"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/thinkeridea/go-extend/exunicode/exutf8"
 )
@@ -236,4 +237,12 @@ func GetLocalIP() (string, error) {
 		}
 	}
 	return "127.0.0.1", nil
+}
+
+// 空值转换为nil,主要用于json类型字段的值处理
+func EmptyConvert(value any) any {
+	if g.IsEmpty(value) {
+		return nil
+	}
+	return value
 }
